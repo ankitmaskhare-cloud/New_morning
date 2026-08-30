@@ -431,7 +431,7 @@ def start(message: types.Message):
         send_html(message.chat.id, text, reply_markup=markup)
     else:
         user_name = html.escape(user.first_name)
-        send(message.chat.id, f"HELLO '{user_name}'")
+        send(message.chat.id, f"HELLO {user_name} 🌹 ")
         
         sent = send_welcome_contents(message.chat.id, user.first_name, "Channel")
         if not sent: 
