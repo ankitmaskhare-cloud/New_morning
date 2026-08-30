@@ -12,7 +12,7 @@ DATA_FILE = os.path.join(os.getcwd(), "data.json")
 WELCOME_DIR = os.path.join(os.getcwd(), "welcome_files")
 os.makedirs(WELCOME_DIR, exist_ok=True)
 
-# ═══════ PREMIUM EMOJI MAPPING (44 EMOJIS) ═══════
+# ═══════ PREMIUM EMOJI MAPPING ═══════
 PREMIUM_EMOJI_MAP = {
     "✅": ["6113743365826677162"],
     "📢": ["5931641120458018914"],
@@ -60,6 +60,62 @@ PREMIUM_EMOJI_MAP = {
     "💘": ["6266818250818983044"],
     "🎥": ["6264778055454036969"],
     "⭐": ["6138574830917655563"],
+    "🍓": ["6242379654976509431"],
+    "🍒": ["6242014252043868089"],
+    "🍎": ["6242347743369500459"],
+    "🍅": ["5900140601948507995"],
+    "🌶️": ["5785281906459283269"],
+    "🍉": ["6014898614814382254"],
+    "🍑": ["6267225207560214192"],
+    "🍊": ["6267291337171670780"],
+    "🥕": ["6266787022111773140"],
+    "🥭": ["6265037836550936046"],
+    "🍍": ["6266955436369385728"],
+    "🍌": ["6266973397922616654"],
+    "🌽": ["6264720734820505831"],
+    "🍋": ["6267128480601741166"],
+    "🍋‍🟩": ["6267097569722111582"],
+    "🍈": ["6267019543051244106"],
+    "🍐": ["6267264360482084046"],
+    "🥬": ["5244837092042750681"],
+    "🫑": ["5246762912428603768"],
+    "🍏": ["5224607267797606837"],
+    "🥝": ["5276032951342088188"],
+    "🥑": ["6111778259374971023"],
+    "🫒": ["5949775417274536507"],
+    "🥦": ["6246589483135802654"],
+    "🥒": ["6244267675355193452"],
+    "🫐": ["6246859052463170661"],
+    "🍆": ["6246994769134756588"],
+    "🍠": ["6242198351522045253"],
+    "🫜": ["6242126625568200803"],
+    "🥥": ["6030520420187246063"],
+    "🥔": ["6030366192206614299"],
+    "🍄‍🟫": ["6030433717682442920"],
+    "🧅": ["6028145874503208169"],
+    "🫚": ["6028220478085140634"],
+    "🧄": ["6030617915944866144"],
+    "🫘": ["6035277294036061660"],
+    "🌰": ["6267152480878990865"],
+    "🥜": ["6266818688905648040"],
+    "🍞": ["6267264360482084046"],
+    "🫓": ["6282702779341346176"],
+    "🥐": ["5990107500941155180"],
+    "🥖": ["5989930621303004669"],
+    "🥯": ["5990238269810415926"],
+    "🧇": ["5990350016269523841"],
+    "🥞": ["6332180738166755902"],
+    "🍳": ["6332256157792474083"],
+    "🥚": ["6332473066525824816"],
+    "🧀": ["6332189220727165527"],
+    "🥓": ["6332297784615506761"],
+    "🥩": ["6334316251740902076"],
+    "🍗": ["6332595717906895459"],
+    "🍖": ["6334586168960619847"],
+    "🍔": ["6332546471811880304"],
+    "🌭": ["6332159589747790307"],
+    "🥪": ["6332240524111517402"],
+    "🥨": ["6075586403922613321"],
 }
 
 COLOR_MAP = {"blue": "primary", "green": "success", "red": "danger"}
@@ -299,7 +355,7 @@ def start(message: types.Message):
     
     if is_admin(user.id):
         join_status = "🟢 ON" if data.get("join_enabled", True) else "🔴 OFF"
-        text = f"""╔══════════════════════╗\n║  🏆 <b>ALL-IN-ONE BOT</b>  ║\n╚══════════════════════╝\n👑 <b>Admin:</b> {user.first_name}\n📋 /welcome | /stats | /pin | /help\n\n📥 <b>Join Accept:</b> {join_status}\n\n<i>💡 Admin = Normal | Forward = Forward Tag</i>\n<i>💎 44 Premium Emojis!</i>"""
+        text = f"""╔══════════════════════╗\n║  🏆 <b>ALL-IN-ONE BOT</b>  ║\n╚══════════════════════╝\n👑 <b>Admin:</b> {user.first_name}\n📋 /welcome | /stats | /pin | /help\n\n📥 <b>Join Accept:</b> {join_status}\n\n<i>💡 Admin = Normal | Forward = Forward Tag</i>\n<i>💎 Premium Emojis Loaded!</i>"""
         markup = types.InlineKeyboardMarkup(row_width=2)
         markup.add(
             colored_btn("START ✅", callback="join_on", color="success"),
@@ -424,7 +480,6 @@ def handle_file_upload(message: types.Message):
             fp = os.path.join(WELCOME_DIR, f"{fname}.mp4")
             with open(fp, 'wb') as f: f.write(d)
             
-            # 🟢 AUTO-OPTIMIZE VIDEO METADATA FOR STREAMING
             opt_fp = os.path.join(WELCOME_DIR, f"{fname}_opt.mp4")
             try:
                 subprocess.run(["ffmpeg", "-i", fp, "-movflags", "+faststart", "-acodec", "copy", "-vcodec", "copy", opt_fp], check=True)
@@ -629,7 +684,6 @@ def run_web():
 def main():
     logger.info("🤖 ALL-IN-ONE BOT STARTING...")
     
-    # Render Port Server Thread
     threading.Thread(target=run_web, daemon=True).start()
     
     logger.info(f"💾 Data Path: {DATA_FILE}")
