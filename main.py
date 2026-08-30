@@ -435,7 +435,7 @@ def start(message: types.Message):
         
         sent = send_welcome_contents(message.chat.id, user.first_name, "Channel")
         if not sent: 
-            send(message.chat.id, "✅ Bot Active! ✅")
+            send(message.chat.id, "")
 
 @bot.message_handler(commands=['pin'])
 def pin_cmd(message: types.Message):
