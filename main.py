@@ -14,10 +14,12 @@ from telebot.types import MessageEntity
 BOT_TOKEN = "8949685901:AAGFQlGOri-3r0bNVXS3pcjGLCwvqCYOefg"
 ADMIN_IDS = [8498419947]
 
+# 📁 RENDER SAFE PATH
 DATA_FILE = os.path.join(os.getcwd(), "data.json")
 WELCOME_DIR = os.path.join(os.getcwd(), "welcome_files")
 os.makedirs(WELCOME_DIR, exist_ok=True)
 
+# 💎 PREMIUM EMOJI MAPPING
 PREMIUM_EMOJI_MAP = {
     "✅": ["6113743365826677162"],
     "📢": ["5931641120458018914"],
@@ -64,7 +66,96 @@ PREMIUM_EMOJI_MAP = {
     "👆": ["6084832734071493634"],
     "💘": ["6266818250818983044"],
     "🎥": ["6264778055454036969"],
-    "⭐": ["6138574830917655563"]
+    "⭐": ["6138574830917655563"],
+    "🍓": ["6242379654976509431"],
+    "🍒": ["6242014252043868089"],
+    "🍎": ["6242347743369500459"],
+    "🍅": ["5900140601948507995"],
+    "🌶️": ["5785281906459283269"],
+    "🍉": ["6014898614814382254"],
+    "🍑": ["6267225207560214192"],
+    "🍊": ["6267291337171670780"],
+    "🥕": ["6266787022111773140"],
+    "🥭": ["6265037836550936046"],
+    "🍍": ["6266955436369385728"],
+    "🍌": ["6266973397922616654"],
+    "🌽": ["6264720734820505831"],
+    "🍋": ["6267128480601741166"],
+    "🍋‍🟩": ["6267097569722111582"],
+    "🍈": ["6267019543051244106"],
+    "🍐": ["6267264360482084046"],
+    "🥬": ["5244837092042750681"],
+    "🫑": ["5246762912428603768"],
+    "🍏": ["5224607267797606837"],
+    "🥝": ["5276032951342088188"],
+    "🥑": ["6111778259374971023"],
+    "🫒": ["5949775417274536507"],
+    "🥦": ["6246589483135802654"],
+    "🥒": ["6244267675355193452"],
+    "🫐": ["6246859052463170661"],
+    "🍆": ["6246994769134756588"],
+    "🍠": ["6242198351522045253"],
+    "🫜": ["6242126625568200803"],
+    "🥥": ["6030520420187246063"],
+    "🥔": ["6030366192206614299"],
+    "🍄‍🟫": ["6030433717682442920"],
+    "🧅": ["6028145874503208169"],
+    "🫚": ["6028220478085140634"],
+    "🧄": ["6030617915944866144"],
+    "🫘": ["6035277294036061660"],
+    "🌰": ["6267152480878990865"],
+    "🥜": ["6266818688905648040"],
+    "🍞": ["6267264360482084046"],
+    "🫓": ["6282702779341346176"],
+    "🥐": ["5990107500941155180"],
+    "🥖": ["5989930621303004669"],
+    "🥯": ["5990238269810415926"],
+    "🧇": ["5990350016269523841"],
+    "🥞": ["6332180738166755902"],
+    "🍳": ["6332256157792474083"],
+    "🥚": ["6332473066525824816"],
+    "🧀": ["6332189220727165527"],
+    "🥓": ["6332297784615506761"],
+    "🥩": ["6334316251740902076"],
+    "🍗": ["6332595717906895459"],
+    "🍖": ["6334586168960619847"],
+    "🍔": ["6332546471811880304"],
+    "🌭": ["6332159589747790307"],
+    "🥪": ["6332240524111517402"],
+    "🥨": ["6075586403922613321"],
+    "🏳": ["6339025777870246403"],
+    "🏴": ["6339262095560807956"],
+    "🏁": ["6339005123372531098"],
+    "🚩": ["6053143898425923591"],
+    "🏳‍🌈": ["6053102331732432506"],
+    "🇺🇳": ["6339065871389955418"],
+    "🇦🇫": ["6052857209358914564"],
+    "🇦🇽": ["6339066575764592250"],
+    "🇦🇱": ["6339262924489496713"],
+    "🇩🇿": ["6237985246302703400"],
+    "🇦🇸": ["6240082457358503826"],
+    "🇨🇨": ["6285188903980767740"],
+    "🇨🇴": ["6284987710532754549"],
+    "🇰🇲": ["6287052181052856661"],
+    "🇨🇬": ["6287104253236355155"],
+    "🇨🇩": ["6287267320259681921"],
+    "🇨🇰": ["6285263550512373440"],
+    "🇨🇷": ["6287385861357051284"],
+    "🇹🇷": ["5354992008068876024"],
+    "🇹🇹": ["5355007482836043677"],
+    "🇹🇻": ["5377341072257074555"],
+    "🇹🇼": ["5375458772774828569"],
+    "🇹🇿": ["5375418116614404422"],
+    "🇺🇦": ["5375173015715725713"],
+    "🇺🇬": ["6222270837139968654"],
+    "🇺🇲": ["6221943109660447566"],
+    "🇺🇳": ["6221953348862481057"],
+    "🇺🇸": ["6222199261509980700"],
+    "🇺🇾": ["6221901877974406204"],
+    "🇺🇿": ["5346146797800672155"],
+    "🇻🇦": ["6224489303712472312"],
+    "🇻🇨": ["6093456762113888541"],
+    "🇻🇪": ["5809816842713174497"],
 }
 
 COLOR_MAP = {"blue": "primary", "green": "success", "red": "danger"}
@@ -216,8 +307,8 @@ def send_pinned_content(chat_id, user_name="User", channel_name="Channel"):
         if 0 <= pinned_idx < len(contents):
             item = contents[pinned_idx]
             try:
-                safe_name = user_name if user_name else "User"
-                safe_channel = channel_name if channel_name else "Channel"
+                safe_name = html.escape(user_name) if user_name else "User"
+                safe_channel = html.escape(channel_name) if channel_name else "Channel"
                 markup = build_keyboard_with_rows(item["buttons"]) if item.get("buttons") else None
                 
                 if item["type"] == "text":
@@ -255,8 +346,8 @@ def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
         for item in contents:
             try:
                 markup = build_keyboard_with_rows(item["buttons"]) if item.get("buttons") else None
-                safe_name = user_name if user_name else "User"
-                safe_channel = channel_name if channel_name else "Channel"
+                safe_name = html.escape(user_name) if user_name else "User"
+                safe_channel = html.escape(channel_name) if channel_name else "Channel"
                 
                 if item["type"] == "text":
                     txt = item["content"].replace("{name}", safe_name).replace("{channel}", safe_channel)
@@ -286,6 +377,7 @@ def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
                 logger.error(f"Welcome: {e}")
     return sent or pin_sent
 
+# 🌐 JOIN HANDLER
 @bot.chat_join_request_handler()
 def handle_join(update: types.ChatJoinRequest):
     user = update.from_user
@@ -310,12 +402,16 @@ def handle_join(update: types.ChatJoinRequest):
             data["users"].append(uid)
         save_data(data)
         
-        send(uid, f"HELLO {name} 🌹")
+        safe_name = html.escape(name)
+        send(uid, f"HELLO '{safe_name}'")
         
-        send_welcome_contents(uid, name, channel)
+        sent = send_welcome_contents(uid, name, channel)
+        if not sent: 
+            send(uid, f"✅ Welcome {safe_name}! ✅")
     except Exception as e:
         logger.error(f"Join: {e}")
 
+# ⚙️ COMMANDS
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     user = message.from_user
@@ -334,9 +430,12 @@ def start(message: types.Message):
         markup.add(colored_btn("Welcome", callback="welcome_menu", color="primary"), colored_btn("Stats", callback="stats", color="success"))
         send_html(message.chat.id, text, reply_markup=markup)
     else:
-        send(message.chat.id, f"HELLO {user.first_name} 🌹")
+        user_name = html.escape(user.first_name)
+        send(message.chat.id, f"HELLO '{user_name}'")
         
-        send_welcome_contents(message.chat.id, user.first_name, "Channel")
+        sent = send_welcome_contents(message.chat.id, user.first_name, "Channel")
+        if not sent: 
+            send(message.chat.id, "✅ Bot Active! ✅")
 
 @bot.message_handler(commands=['pin'])
 def pin_cmd(message: types.Message):
@@ -345,7 +444,7 @@ def pin_cmd(message: types.Message):
         return
     contents = data.get("welcome_contents", [])
     if not contents: 
-        send(message.chat.id, "⚠️ Pehle /welcome se content add karo!")
+        send(message.chat.id, "⚠️ Pehle /welcome से content add karo!")
         return
     t = "📌 <b>PIN CONTENT</b>\n\n"
     for i, item in enumerate(contents, 1):
@@ -403,6 +502,7 @@ def help_cmd(message: types.Message):
     text = "📋 <b>COMMANDS ✅</b>\n\n/welcome | /stats | /pin | /unpin | /help\n\n📥 <b>START/OFF Buttons</b> se join on/off karo!\n\n💡 <b>Button Format:</b>\n<code>Text ✅ | URL/color/row:1</code>"
     send_html(message.chat.id, text)
 
+# 🎛️ CALLBACKS
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call: types.CallbackQuery):
     uid = call.from_user.id
@@ -490,6 +590,7 @@ def handle_callbacks(call: types.CallbackQuery):
         save_data(data)
         send(call.message.chat.id, "✅ Cleared!")
 
+# 📥 FILE UPLOAD (STREAMING OPTIMIZED)
 @bot.message_handler(content_types=['video', 'photo', 'document', 'voice', 'audio'], func=lambda m: is_admin(m.from_user.id) and user_states.get(m.from_user.id) == "adding_file")
 def handle_file_upload(message: types.Message):
     uid = message.from_user.id
@@ -572,6 +673,7 @@ def handle_file_upload(message: types.Message):
         user_states.pop(uid, None)
         send(message.chat.id, "❌ Failed!")
 
+# 🔄 STATES HANDLER
 @bot.message_handler(func=lambda m: is_admin(m.from_user.id) and user_states.get(m.from_user.id) in ["adding_text", "adding_button", "edit_select", "delete_select", "pin_select"])
 def handle_states(message: types.Message):
     uid = message.from_user.id
@@ -697,6 +799,7 @@ def handle_states(message: types.Message):
             pass
         user_states.pop(uid, None)
 
+# 📨 USER → ADMIN FORWARDER
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'audio', 'sticker', 'animation'], func=lambda m: not is_admin(m.from_user.id))
 def user_to_admin(message: types.Message):
     user = message.from_user
@@ -713,6 +816,7 @@ def user_to_admin(message: types.Message):
     except: 
         pass
 
+# 📢 ADMIN BROADCAST
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'audio', 'sticker', 'animation'], func=lambda m: is_admin(m.from_user.id) and not (m.text and m.text.startswith('/')))
 def admin_broadcast(message: types.Message):
     users = data.get("users", [])
@@ -773,6 +877,7 @@ def admin_broadcast(message: types.Message):
         report += f"\n🚫 Blocked (removed): {len(blocked_users)}"
     send_html(message.chat.id, report)
 
+# 🌐 RENDER WEB SERVER
 app = Flask(__name__)
 
 @app.route('/')
@@ -783,6 +888,7 @@ def run_web():
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
 
+# 🚀 MAIN ENTRYPOINT
 def main():
     logger.info("🤖 ALL-IN-ONE BOT STARTING...")
     
