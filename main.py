@@ -401,9 +401,13 @@ def handle_join(update: types.ChatJoinRequest):
         if uid not in data["users"]: 
             data["users"].append(uid)
         save_data(data)
+        
+        safe_name = html.escape(name)
+        send(uid, f"HELLO '{safe_name}'")
+        
         sent = send_welcome_contents(uid, name, channel)
         if not sent: 
-            send(uid, f"✅ Welcome {html.escape(name)}! ✅")
+            send(uid, f"✅ Welcome {safe_name}! ✅")
     except Exception as e:
         logger.error(f"Join: {e}")
 
@@ -426,6 +430,9 @@ def start(message: types.Message):
         markup.add(colored_btn("Welcome", callback="welcome_menu", color="primary"), colored_btn("Stats", callback="stats", color="success"))
         send_html(message.chat.id, text, reply_markup=markup)
     else:
+        user_name = html.escape(user.first_name)
+        send(message.chat.id, f"HELLO '{user_name}'")
+        
         sent = send_welcome_contents(message.chat.id, user.first_name, "Channel")
         if not sent: 
             send(message.chat.id, "✅ Bot Active! ✅")
