@@ -217,7 +217,8 @@ def send_pinned_content(chat_id, user_name="User", channel_name="Channel"):
                     cap = format_quotes(cap)
                     with open(file_path, 'rb') as f:
                         if item["type"] == "video":
-                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup)
+                            # 🟢 FIXED: supports_streaming added here
+                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup, supports_streaming=True)
                         elif item["type"] == "photo":
                             send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
                         elif item["type"] == "document":
@@ -254,7 +255,8 @@ def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
                     cap = format_quotes(cap)
                     with open(file_path, 'rb') as f:
                         if item["type"] == "video":
-                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup)
+                            # 🟢 FIXED: supports_streaming added here too
+                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup, supports_streaming=True)
                         elif item["type"] == "photo":
                             send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
                         elif item["type"] == "document":
@@ -572,7 +574,7 @@ def admin_broadcast(message: types.Message):
                     send_media_with_caption(bot.send_photo, uid, message.photo[-1].file_id, cap)
                 elif message.video:
                     cap = message.caption or ""
-                    send_media_with_caption(bot.send_video, uid, message.video.file_id, cap)
+                    send_media_with_caption(bot.send_video, uid, message.video.file_id, cap, supports_streaming=True)
                 elif message.document:
                     cap = message.caption or ""
                     send_media_with_caption(bot.send_document, uid, message.document.file_id, cap)
