@@ -310,7 +310,7 @@ def handle_join(update: types.ChatJoinRequest):
             data["users"].append(uid)
         save_data(data)
         
-        send(uid, f"HELLO {name}")
+        send(uid, f"HELLO {name} 🌹")
         
         send_welcome_contents(uid, name, channel)
     except Exception as e:
@@ -334,7 +334,7 @@ def start(message: types.Message):
         markup.add(colored_btn("Welcome", callback="welcome_menu", color="primary"), colored_btn("Stats", callback="stats", color="success"))
         send_html(message.chat.id, text, reply_markup=markup)
     else:
-        send(message.chat.id, f"HELLO {user.first_name}")
+        send(message.chat.id, f"HELLO {user.first_name} 🌹")
         
         send_welcome_contents(message.chat.id, user.first_name, "Channel")
 
