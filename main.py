@@ -1,4 +1,4 @@
-import os, json, logging, html, re, random, threading
+import os, json, logging, re, random, threading, subprocess
 from datetime import datetime
 from flask import Flask
 from telebot import TeleBot, types
@@ -217,7 +217,6 @@ def send_pinned_content(chat_id, user_name="User", channel_name="Channel"):
                     cap = format_quotes(cap)
                     with open(file_path, 'rb') as f:
                         if item["type"] == "video":
-                            # 🟢 FIXED: supports_streaming added here
                             send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup, supports_streaming=True)
                         elif item["type"] == "photo":
                             send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
@@ -255,7 +254,6 @@ def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
                     cap = format_quotes(cap)
                     with open(file_path, 'rb') as f:
                         if item["type"] == "video":
-                            # 🟢 FIXED: supports_streaming added here too
                             send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup, supports_streaming=True)
                         elif item["type"] == "photo":
                             send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
@@ -317,7 +315,7 @@ def start(message: types.Message):
 def pin_cmd(message: types.Message):
     if not is_admin(message.from_user.id): send(message.chat.id, "❌ Admin only!"); return
     contents = data.get("welcome_contents", [])
-    if not contents: send(message.chat.id, "⚠️ Pehle /welcome se content add karo!"); return
+    if not contents: send(message.chat.id, "⚠️ Pehle /welcome से content add karo!"); return
     t = "📌 <b>PIN CONTENT</b>\n\n"
     for i, item in enumerate(contents, 1):
         prev = item.get("content", item.get("filename", ""))[:30] if item["type"] == "text" else item.get("filename", item["type"].upper())
@@ -415,7 +413,7 @@ def handle_callbacks(call: types.CallbackQuery):
         send_html(call.message.chat.id, t)
     elif cmd == "clear": data["welcome_contents"] = []; data["pinned_content"] = None; save_data(data); send(call.message.chat.id, "✅ Cleared!")
 
-# ═══════ FILE UPLOAD ═══════
+# ═══════ FILE UPLOAD (AUTO-OPTIMIZED FOR STREAMING) ═══════
 @bot.message_handler(content_types=['video', 'photo', 'document', 'voice', 'audio'], func=lambda m: is_admin(m.from_user.id) and user_states.get(m.from_user.id) == "adding_file")
 def handle_file_upload(message: types.Message):
     uid = message.from_user.id; fname = f"w_{datetime.now():%H%M%S}"; saved = False
@@ -425,6 +423,16 @@ def handle_file_upload(message: types.Message):
             fi = bot.get_file(message.video.file_id); d = bot.download_file(fi.file_path)
             fp = os.path.join(WELCOME_DIR, f"{fname}.mp4")
             with open(fp, 'wb') as f: f.write(d)
+            
+            # 🟢 AUTO-OPTIMIZE VIDEO METADATA FOR STREAMING
+            opt_fp = os.path.join(WELCOME_DIR, f"{fname}_opt.mp4")
+            try:
+                subprocess.run(["ffmpeg", "-i", fp, "-movflags", "+faststart", "-acodec", "copy", "-vcodec", "copy", opt_fp], check=True)
+                os.replace(opt_fp, fp)
+            except Exception as ffmpeg_err:
+                logger.error(f"FFmpeg auto-optimize skipped: {ffmpeg_err}")
+                if os.path.exists(opt_fp): os.remove(opt_fp)
+
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["video"]
             clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "video", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
@@ -458,7 +466,7 @@ def handle_file_upload(message: types.Message):
             clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "audio", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
     except Exception as e: logger.error(f"File: {e}")
-    if saved: data["welcome_contents"].append(new_item); save_data(data); user_states.pop(uid, None); send(message.chat.id, "✅ File added! /welcome")
+    if saved: data["welcome_contents"].append(new_item); save_data(data); user_states.pop(uid, None); send(message.chat.id, "✅ File added & optimized! /welcome")
     else: user_states.pop(uid, None); send(message.chat.id, "❌ Failed!")
 
 # ═══════ STATES HANDLER ═══════
