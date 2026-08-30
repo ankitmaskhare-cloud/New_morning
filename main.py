@@ -1,19 +1,18 @@
 import os, json, logging, html, re, random, threading
 from datetime import datetime
+from flask import Flask
 from telebot import TeleBot, types
 from telebot.types import MessageEntity
-from flask import Flask
 
 BOT_TOKEN = "8949685901:AAGFQlGOri-3r0bNVXS3pcjGLCwvqCYOefg"
 ADMIN_IDS = [8498419947]
 
+# ⭐ RENDER SAFE PATH
 DATA_FILE = os.path.join(os.getcwd(), "data.json")
 WELCOME_DIR = os.path.join(os.getcwd(), "welcome_files")
 os.makedirs(WELCOME_DIR, exist_ok=True)
 
-# Data corruption se bachne ke liye threading lock
-data_lock = threading.Lock()
-
+# ═══════ PREMIUM EMOJI MAPPING (44 EMOJIS) ═══════
 PREMIUM_EMOJI_MAP = {
     "✅": ["6113743365826677162"],
     "📢": ["5931641120458018914"],
@@ -87,31 +86,29 @@ DEFAULT_DATA = {
 }
 
 def load_data():
-    with data_lock:
-        try:
-            if os.path.exists(DATA_FILE):
-                with open(DATA_FILE, 'r') as f:
-                    loaded = json.load(f)
-                    for item in loaded.get("welcome_contents", []):
-                        if "caption_entities" in item and item["caption_entities"]:
-                            entities = []
-                            for e_dict in item["caption_entities"]:
-                                entities.append(MessageEntity(type=e_dict.get("type","custom_emoji"), offset=e_dict.get("offset",0), length=e_dict.get("length",1), custom_emoji_id=e_dict.get("custom_emoji_id","")))
-                            item["caption_entities"] = entities
-                    for key in DEFAULT_DATA:
-                        if key not in loaded: loaded[key] = DEFAULT_DATA[key]
-                    return loaded
-        except Exception as e: logger.error(f"Load: {e}")
-        return DEFAULT_DATA.copy()
+    try:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r') as f:
+                loaded = json.load(f)
+                for item in loaded.get("welcome_contents", []):
+                    if "caption_entities" in item and item["caption_entities"]:
+                        entities = []
+                        for e_dict in item["caption_entities"]:
+                            entities.append(MessageEntity(type=e_dict.get("type","custom_emoji"), offset=e_dict.get("offset",0), length=e_dict.get("length",1), custom_emoji_id=e_dict.get("custom_emoji_id","")))
+                        item["caption_entities"] = entities
+                for key in DEFAULT_DATA:
+                    if key not in loaded: loaded[key] = DEFAULT_DATA[key]
+                return loaded
+    except Exception as e: logger.error(f"Load: {e}")
+    return DEFAULT_DATA.copy()
 
 def save_data(d):
-    with data_lock:
-        def conv(obj):
-            if isinstance(obj, MessageEntity): return {"type": obj.type, "offset": obj.offset, "length": obj.length, "custom_emoji_id": obj.custom_emoji_id}
-            if isinstance(obj, dict): return {k: conv(v) for k, v in obj.items()}
-            if isinstance(obj, list): return [conv(i) for i in obj]
-            return obj
-        with open(DATA_FILE, 'w') as f: json.dump(conv(d), f, indent=4)
+    def conv(obj):
+        if isinstance(obj, MessageEntity): return {"type": obj.type, "offset": obj.offset, "length": obj.length, "custom_emoji_id": obj.custom_emoji_id}
+        if isinstance(obj, dict): return {k: conv(v) for k, v in obj.items()}
+        if isinstance(obj, list): return [conv(i) for i in obj]
+        return obj
+    with open(DATA_FILE, 'w') as f: json.dump(conv(d), f, indent=4)
 
 data = load_data()
 for key in DEFAULT_DATA:
@@ -122,49 +119,25 @@ user_states = {}
 
 def is_admin(uid): return uid in ADMIN_IDS
 
-def parse_quotes_and_emojis(text):
-    if not text:
-        return text, []
-    
+def format_quotes(text):
+    if not text: return ""
+    return re.sub(r'"([^"]*)"', r'<blockquote>\1</blockquote>', text)
+
+def convert_premium_emojis(text):
+    if not text: return text, []
     entities = []
-    clean_text = text
-    
     for plan_emoji, emoji_ids in PREMIUM_EMOJI_MAP.items():
         start = 0
         while True:
-            pos = clean_text.find(plan_emoji, start)
-            if pos == -1:
-                break
-            utf16_offset = len(clean_text[:pos].encode('utf-16-le')) // 2
+            pos = text.find(plan_emoji, start)
+            if pos == -1: break
+            utf16_offset = len(text[:pos].encode('utf-16-le')) // 2
             utf16_length = len(plan_emoji.encode('utf-16-le')) // 2
             selected_id = random.choice(emoji_ids)
             entities.append(MessageEntity(type="custom_emoji", offset=utf16_offset, length=utf16_length, custom_emoji_id=selected_id))
             start = pos + len(plan_emoji)
-            
-    quote_pattern = re.compile(r'"([^"]*)"')
-    
-    def replace_quotes(match):
-        nonlocal clean_text, entities
-        inner_content = match.group(1)
-        full_match_str = match.group(0)
-        
-        match_start = clean_text.find(full_match_str)
-        if match_start == -1:
-            return inner_content
-            
-        utf16_offset = len(clean_text[:match_start].encode('utf-16-le')) // 2
-        utf16_length = len(inner_content.encode('utf-16-le')) // 2
-        
-        entities.append(MessageEntity(type="blockquote", offset=utf16_offset, length=utf16_length))
-        
-        clean_text = clean_text.replace(full_match_str, inner_content, 1)
-        return inner_content
-
-    while quote_pattern.search(clean_text):
-        clean_text = quote_pattern.sub(replace_quotes, clean_text, count=1)
-
     entities.sort(key=lambda x: x.offset)
-    return clean_text, entities
+    return text, entities
 
 def extract_button_icon(text):
     for plan_emoji, emoji_ids in PREMIUM_EMOJI_MAP.items():
@@ -198,14 +171,14 @@ def build_keyboard_with_rows(buttons_list):
 
 def send(chat_id, text, reply_markup=None, **kwargs):
     if isinstance(text, str):
-        clean_txt, emoji_entities = parse_quotes_and_emojis(text)
+        clean_txt, emoji_entities = convert_premium_emojis(text)
         if emoji_entities:
             return bot.send_message(chat_id, clean_txt, entities=emoji_entities, reply_markup=reply_markup, **kwargs)
         return bot.send_message(chat_id, clean_txt, reply_markup=reply_markup, parse_mode="HTML", **kwargs)
     return bot.send_message(chat_id, text, reply_markup=reply_markup, **kwargs)
 
 def send_html(chat_id, text, reply_markup=None):
-    clean_txt, emoji_entities = parse_quotes_and_emojis(text)
+    clean_txt, emoji_entities = convert_premium_emojis(text)
     if emoji_entities:
         return bot.send_message(chat_id, clean_txt, entities=emoji_entities, reply_markup=reply_markup, disable_web_page_preview=True)
     return bot.send_message(chat_id, clean_txt, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
@@ -214,56 +187,87 @@ def send_media_with_caption(func, chat_id, file_id, caption="", reply_markup=Non
     if 'filename' in kwargs:
         kwargs['visible_file_name'] = kwargs.pop('filename')
     if caption:
-        clean_cap, cap_entities = parse_quotes_and_emojis(caption)
+        clean_cap, cap_entities = convert_premium_emojis(caption)
         if cap_entities:
             return func(chat_id, file_id, caption=clean_cap, caption_entities=cap_entities, reply_markup=reply_markup, **kwargs)
         return func(chat_id, file_id, caption=clean_cap, reply_markup=reply_markup, **kwargs)
     return func(chat_id, file_id, reply_markup=reply_markup, **kwargs)
 
-def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
-    contents = data.get("welcome_contents", [])
+def send_pinned_content(chat_id, user_name="User", channel_name="Channel"):
     pinned_idx = data.get("pinned_content")
+    if pinned_idx is not None:
+        contents = data.get("welcome_contents", [])
+        if 0 <= pinned_idx < len(contents):
+            item = contents[pinned_idx]
+            try:
+                safe_name = html.escape(user_name) if user_name else "User"
+                safe_channel = html.escape(channel_name) if channel_name else "Channel"
+                markup = None
+                if item.get("buttons"):
+                    markup = build_keyboard_with_rows(item["buttons"])
+                if item["type"] == "text":
+                    txt = item["content"].replace("{name}", safe_name).replace("{channel}", safe_channel)
+                    txt = format_quotes(txt)
+                    send(chat_id, f"📌 PINNED\n━━━━━━━━━━━━━\n{txt}", reply_markup=markup)
+                    return True
+                elif item["type"] in ["video","photo","document","voice","audio"]:
+                    file_path = item.get("content", "")
+                    if not os.path.exists(file_path): return False
+                    cap = item.get("caption","").replace("{name}", safe_name).replace("{channel}", safe_channel)
+                    cap = format_quotes(cap)
+                    with open(file_path, 'rb') as f:
+                        if item["type"] == "video":
+                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup)
+                        elif item["type"] == "photo":
+                            send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
+                        elif item["type"] == "document":
+                            send_media_with_caption(bot.send_document, chat_id, f, cap, reply_markup=markup, visible_file_name=item.get("filename","file"))
+                        elif item["type"] == "voice":
+                            send_media_with_caption(bot.send_voice, chat_id, f, cap)
+                        elif item["type"] == "audio":
+                            send_media_with_caption(bot.send_audio, chat_id, f, cap)
+                    return True
+            except Exception as e: logger.error(f"Pin: {e}")
+    return False
+
+def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
+    pin_sent = send_pinned_content(chat_id, user_name, channel_name)
+    contents = data.get("welcome_contents", [])
     sent = False
-    
     if contents:
-        for idx, item in enumerate(contents):
+        for item in contents:
             try:
                 markup = None
                 if item.get("buttons"):
                     markup = build_keyboard_with_rows(item["buttons"])
                 safe_name = html.escape(user_name) if user_name else "User"
                 safe_channel = html.escape(channel_name) if channel_name else "Channel"
-                
-                sent_msg = None
                 if item["type"] == "text":
                     txt = item["content"].replace("{name}", safe_name).replace("{channel}", safe_channel)
-                    sent_msg = send(chat_id, txt, reply_markup=markup)
+                    txt = format_quotes(txt)
+                    if not pin_sent: send(chat_id, txt, reply_markup=markup)
                     sent = True
                 elif item["type"] in ["video","photo","document","voice","audio"]:
                     file_path = item.get("content", "")
                     if not os.path.exists(file_path): continue
                     cap = item.get("caption","").replace("{name}", safe_name).replace("{channel}", safe_channel)
+                    cap = format_quotes(cap)
                     with open(file_path, 'rb') as f:
                         if item["type"] == "video":
-                            sent_msg = send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup)
+                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup)
                         elif item["type"] == "photo":
-                            sent_msg = send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
+                            send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
                         elif item["type"] == "document":
-                            sent_msg = send_media_with_caption(bot.send_document, chat_id, f, cap, reply_markup=markup, visible_file_name=item.get("filename","file"))
+                            send_media_with_caption(bot.send_document, chat_id, f, cap, reply_markup=markup, visible_file_name=item.get("filename","file"))
                         elif item["type"] == "voice":
-                            sent_msg = send_media_with_caption(bot.send_voice, chat_id, f, cap)
+                            send_media_with_caption(bot.send_voice, chat_id, f, cap)
                         elif item["type"] == "audio":
-                            sent_msg = send_media_with_caption(bot.send_audio, chat_id, f, cap)
+                            send_media_with_caption(bot.send_audio, chat_id, f, cap)
                     sent = True
-                
-                if sent_msg and pinned_idx is not None and pinned_idx == idx:
-                    try:
-                        bot.pin_chat_message(chat_id, sent_msg.message_id)
-                    except Exception as pin_err:
-                        logger.error(f"Native Pin Error: {pin_err}")
             except Exception as e: logger.error(f"Welcome: {e}")
-    return sent
+    return sent or pin_sent
 
+# ═══════ JOIN HANDLER ═══════
 @bot.chat_join_request_handler()
 def handle_join(update: types.ChatJoinRequest):
     user = update.from_user; chat = update.chat
@@ -287,6 +291,7 @@ def handle_join(update: types.ChatJoinRequest):
     except Exception as e:
         logger.error(f"Join: {e}")
 
+# ═══════ COMMANDS ═══════
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     user = message.from_user
@@ -310,7 +315,7 @@ def start(message: types.Message):
 def pin_cmd(message: types.Message):
     if not is_admin(message.from_user.id): send(message.chat.id, "❌ Admin only!"); return
     contents = data.get("welcome_contents", [])
-    if not contents: send(message.chat.id, "⚠️ Pehle /welcome से content add karo!"); return
+    if not contents: send(message.chat.id, "⚠️ Pehle /welcome se content add karo!"); return
     t = "📌 <b>PIN CONTENT</b>\n\n"
     for i, item in enumerate(contents, 1):
         prev = item.get("content", item.get("filename", ""))[:30] if item["type"] == "text" else item.get("filename", item["type"].upper())
@@ -355,6 +360,7 @@ def help_cmd(message: types.Message):
     text = "📋 <b>COMMANDS ✅</b>\n\n/welcome | /stats | /pin | /unpin | /help\n\n📥 <b>START/OFF Buttons</b> se join on/off karo!\n\n💡 <b>Button Format:</b>\n<code>Text ✅ | URL/color/row:1</code>"
     send_html(message.chat.id, text)
 
+# ═══════ CALLBACKS ═══════
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call: types.CallbackQuery):
     uid = call.from_user.id
@@ -379,7 +385,7 @@ def handle_callbacks(call: types.CallbackQuery):
             prev = item.get("content", item.get("filename", ""))[:30] if item["type"] == "text" else item.get("filename", item["type"].upper())
             t += f"{i}. {'📝' if item['type']=='text' else '📁'} {prev}\n"
         t += "\nNumber (0=unpin):"; user_states[uid] = "pin_select"; send_html(call.message.chat.id, t)
-    elif cmd == "add_text": user_states[uid] = "adding_text"; send_html(call.message.chat.id, "📝 Welcome text ✅\n\nUse {name} | {channel}\n\n/cancel")
+    elif cmd == "add_text": user_states[uid] = "adding_text"; send_html(call.message.chat.id, "📝 Welcome text ✅\n\nUse {name} | {channel} | \"text\" for quotes\n\n/cancel")
     elif cmd == "add_file": user_states[uid] = "adding_file"; send_html(call.message.chat.id, "📁 File bhejo 📁\n\nCaption likho - ✅😂🔥⭐ sab auto premium!\n\n/cancel")
     elif cmd == "btn_add":
         if not contents: send(call.message.chat.id, "⚠️ Pehle text add!"); return
@@ -407,6 +413,7 @@ def handle_callbacks(call: types.CallbackQuery):
         send_html(call.message.chat.id, t)
     elif cmd == "clear": data["welcome_contents"] = []; data["pinned_content"] = None; save_data(data); send(call.message.chat.id, "✅ Cleared!")
 
+# ═══════ FILE UPLOAD ═══════
 @bot.message_handler(content_types=['video', 'photo', 'document', 'voice', 'audio'], func=lambda m: is_admin(m.from_user.id) and user_states.get(m.from_user.id) == "adding_file")
 def handle_file_upload(message: types.Message):
     uid = message.from_user.id; fname = f"w_{datetime.now():%H%M%S}"; saved = False
@@ -417,14 +424,14 @@ def handle_file_upload(message: types.Message):
             fp = os.path.join(WELCOME_DIR, f"{fname}.mp4")
             with open(fp, 'wb') as f: f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["video"]
-            clean_cap, cap_entities = parse_quotes_and_emojis(cap)
+            clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "video", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
         elif message.photo:
             fi = bot.get_file(message.photo[-1].file_id); d = bot.download_file(fi.file_path)
             fp = os.path.join(WELCOME_DIR, f"{fname}.jpg")
             with open(fp, 'wb') as f: f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["photo"]
-            clean_cap, cap_entities = parse_quotes_and_emojis(cap)
+            clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "photo", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
         elif message.document:
             fi = bot.get_file(message.document.file_id); d = bot.download_file(fi.file_path)
@@ -432,26 +439,27 @@ def handle_file_upload(message: types.Message):
             fp = os.path.join(WELCOME_DIR, f"{fname}{ext}")
             with open(fp, 'wb') as f: f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["document"]
-            clean_cap, cap_entities = parse_quotes_and_emojis(cap)
+            clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "document", "content": fp, "filename": message.document.file_name or "file", "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
         elif message.voice:
             fi = bot.get_file(message.voice.file_id); d = bot.download_file(fi.file_path)
             fp = os.path.join(WELCOME_DIR, f"{fname}.ogg")
             with open(fp, 'wb') as f: f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["voice"]
-            clean_cap, cap_entities = parse_quotes_and_emojis(cap)
+            clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "voice", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
         elif message.audio:
             fi = bot.get_file(message.audio.file_id); d = bot.download_file(fi.file_path)
             fp = os.path.join(WELCOME_DIR, f"{fname}.mp3")
             with open(fp, 'wb') as f: f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["audio"]
-            clean_cap, cap_entities = parse_quotes_and_emojis(cap)
+            clean_cap, cap_entities = convert_premium_emojis(cap)
             new_item = {"type": "audio", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}; saved = True
     except Exception as e: logger.error(f"File: {e}")
     if saved: data["welcome_contents"].append(new_item); save_data(data); user_states.pop(uid, None); send(message.chat.id, "✅ File added! /welcome")
     else: user_states.pop(uid, None); send(message.chat.id, "❌ Failed!")
 
+# ═══════ STATES HANDLER ═══════
 @bot.message_handler(func=lambda m: is_admin(m.from_user.id) and user_states.get(m.from_user.id) in ["adding_text", "adding_button", "edit_select", "delete_select", "pin_select"])
 def handle_states(message: types.Message):
     uid = message.from_user.id; state = user_states.get(uid, "")
@@ -525,14 +533,15 @@ def handle_states(message: types.Message):
             idx = int(message.text.strip()) - 1
             if idx == -1: send(message.chat.id, "❌ Cancelled")
             elif 0 <= idx < len(contents):
-                if data.get("pinned_content"] == idx: data["pinned_content"] = None
-                elif data.get("pinned_content"] is not None and data["pinned_content"] > idx: data["pinned_content"] -= 1
+                if data.get("pinned_content") == idx: data["pinned_content"] = None
+                elif data.get("pinned_content") is not None and data["pinned_content"] > idx: data["pinned_content"] -= 1
                 deleted = contents.pop(idx)
                 if deleted["type"] != "text" and os.path.exists(deleted.get("content", "")): os.remove(deleted["content"])
                 save_data(data); send(message.chat.id, "✅ Deleted! /welcome")
         except: pass
         user_states.pop(uid, None)
 
+# ═══════ USER → ADMIN ═══════
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'audio', 'sticker', 'animation'], func=lambda m: not is_admin(m.from_user.id))
 def user_to_admin(message: types.Message):
     user = message.from_user
@@ -543,6 +552,7 @@ def user_to_admin(message: types.Message):
     try: send(message.chat.id, "✅ Message sent to admin!")
     except: pass
 
+# ═══════ ADMIN BROADCAST ═══════
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'audio', 'sticker', 'animation'], func=lambda m: is_admin(m.from_user.id) and not (m.text and m.text.startswith('/')))
 def admin_broadcast(message: types.Message):
     users = data.get("users", [])
@@ -594,19 +604,24 @@ def admin_broadcast(message: types.Message):
     if blocked_users: report += f"\n🚫 Blocked (removed): {len(blocked_users)}"
     send_html(message.chat.id, report)
 
-# Flask Dummy Server for Render/Cloud Deployments
-app = Flask('')
+# ═══════ RENDER WEB SERVER ═══════
+app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot is alive and running!"
+    return "Bot is active on Render!"
 
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+def run_web():
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 
+# ═══════ MAIN ═══════
 def main():
     logger.info("🤖 ALL-IN-ONE BOT STARTING...")
+    
+    # Render Port Server Thread
+    threading.Thread(target=run_web, daemon=True).start()
+    
     logger.info(f"💾 Data Path: {DATA_FILE}")
     if os.path.exists(DATA_FILE):
         try:
@@ -620,12 +635,6 @@ def main():
     logger.info(f"💎 Premium Emojis: {len(PREMIUM_EMOJI_MAP)} LOADED!")
     logger.info(f"📥 Join Accept: {'ON' if data.get('join_enabled', True) else 'OFF'}")
     logger.info(f"🎯 ALL FEATURES ACTIVE!")
-    
-    # Start Flask Web Server in a separate background thread
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    logger.info("🌐 Flask background web server started successfully.")
-
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
 
 if __name__ == "__main__":
