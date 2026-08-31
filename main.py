@@ -12,7 +12,7 @@ from telebot import TeleBot, types
 from telebot.types import MessageEntity
 
 BOT_TOKEN = "8949685901:AAGFQlGOri-3r0bNVXS3pcjGLCwvqCYOefg"
-ADMIN_IDS = [8498419947]
+ADMIN_IDS = [6862525056]
 
 # 📁 RENDER SAFE PATH
 DATA_FILE = os.path.join(os.getcwd(), "data.json")
@@ -402,11 +402,11 @@ def handle_join(update: types.ChatJoinRequest):
         save_data(data)
         
         safe_name = html.escape(name)
-        send(uid, f"HELLO '{safe_name}'")
+        send(uid, f"HELLO {safe_name} 🌹")
         
         sent = send_welcome_contents(uid, name, channel)
         if not sent: 
-            send(uid, f"✅ Welcome {safe_name}! ✅")
+            send(uid, f"")
     except Exception as e:
         logger.error(f"Join: {e}")
 
