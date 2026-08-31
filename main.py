@@ -12,7 +12,7 @@ from telebot import TeleBot, types
 from telebot.types import MessageEntity
 
 BOT_TOKEN = "8949685901:AAGFQlGOri-3r0bNVXS3pcjGLCwvqCYOefg"
-ADMIN_IDS = [6862525056]
+ADMIN_IDS = [8498419947]
 
 # 📁 RENDER SAFE PATH
 DATA_FILE = os.path.join(os.getcwd(), "data.json")
@@ -377,7 +377,7 @@ def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
                 logger.error(f"Welcome: {e}")
     return sent or pin_sent
 
-# 🌐 JOIN HANDLER
+# 🌐 JOIN HANDLER (FIXED)
 @bot.chat_join_request_handler()
 def handle_join(update: types.ChatJoinRequest):
     user = update.from_user
@@ -385,19 +385,18 @@ def handle_join(update: types.ChatJoinRequest):
     uid, name, chat_id, channel = user.id, user.first_name, chat.id, chat.title
     ckey = str(chat_id)
     
-    if not data.get("join_enabled", True):
-        logger.info(f"⏸️ JOIN OFF - Request pending: {name}")
-        return
-    
     if "channels" not in data["stats"]: 
         data["stats"]["channels"] = {}
     if ckey not in data["stats"]["channels"]: 
         data["stats"]["channels"][ckey] = {"name": channel, "approved": 0}
     
     try:
-        bot.approve_chat_join_request(chat_id, uid)
-        data["stats"]["approved"] += 1
-        data["stats"]["channels"][ckey]["approved"] += 1
+        # Agar join_enabled True hai tabhi auto-approve karega, warna auto-approve skip ho jayega lekin welcome message fir bhi bhej sakte hain agar user manually kare.
+        if data.get("join_enabled", True):
+            bot.approve_chat_join_request(chat_id, uid)
+            data["stats"]["approved"] += 1
+            data["stats"]["channels"][ckey]["approved"] += 1
+        
         if uid not in data["users"]: 
             data["users"].append(uid)
         save_data(data)
@@ -444,7 +443,7 @@ def pin_cmd(message: types.Message):
         return
     contents = data.get("welcome_contents", [])
     if not contents: 
-        send(message.chat.id, "⚠️ Pehle /welcome से content add karo!")
+        send(message.chat.id, "⚠️ Pehle /welcome se content add karo!")
         return
     t = "📌 <b>PIN CONTENT</b>\n\n"
     for i, item in enumerate(contents, 1):
@@ -578,7 +577,7 @@ def handle_callbacks(call: types.CallbackQuery):
         send_html(call.message.chat.id, t)
     elif cmd == "preview":
         if not contents: 
-            send(call.message.chat.id, "⚠️ No content!")
+            send(call.message.chat.id, "👁️ <b>PREVIEW</b>\n\n")
             return
         t = "👁️ <b>PREVIEW</b>\n\n"
         for i, item in enumerate(contents, 1): 
