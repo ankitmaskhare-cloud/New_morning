@@ -12,7 +12,7 @@ from telebot import TeleBot, types
 from telebot.types import MessageEntity
 
 BOT_TOKEN = "8949685901:AAGFQlGOri-3r0bNVXS3pcjGLCwvqCYOefg"
-ADMIN_IDS = [8498419947]
+ADMIN_IDS = [6862525056]
 
 # 📁 RENDER SAFE PATH
 DATA_FILE = os.path.join(os.getcwd(), "data.json")
@@ -431,7 +431,7 @@ def start(message: types.Message):
         send_html(message.chat.id, text, reply_markup=markup)
     else:
         user_name = html.escape(user.first_name)
-        send(message.chat.id, f"HELLO {user_name} 🌹 ")
+        send(message.chat.id, f"HELLO {user_name} 🌹")
         
         sent = send_welcome_contents(message.chat.id, user.first_name, "Channel")
         if not sent: 
