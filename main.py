@@ -11,8 +11,8 @@ from flask import Flask
 from telebot import TeleBot, types
 from telebot.types import MessageEntity
 
-BOT_TOKEN = "8949685901:AAGFQlGOri-3r0bNVXS3pcjGLCwvqCYOefg"
-ADMIN_IDS = [6862525056]
+BOT_TOKEN = "8878950830:AAGXaa_ddIPgMFItoBWUQ4l6lPiwUNDIOTk"
+ADMIN_IDS = [8498419947]
 
 # 📁 RENDER SAFE PATH
 DATA_FILE = os.path.join(os.getcwd(), "data.json")
@@ -367,22 +367,31 @@ def send_pinned_content(chat_id, user_name="User", channel_name="Channel"):
                     send(chat_id, f"📌 PINNED\n━━━━━━━━━━━━━\n{txt}", reply_markup=markup)
                     return True
                 elif item["type"] in ["video", "photo", "document", "voice", "audio"]:
-                    file_path = item.get("content", "")
-                    if not os.path.exists(file_path): 
-                        return False
                     cap = item.get("caption", "").replace("{name}", safe_name).replace("{channel}", safe_channel)
                     cap = format_quotes(cap)
-                    with open(file_path, 'rb') as f:
+                    
+                    if item.get("is_file_id", False):
+                        file_source = item.get("content")
+                    else:
+                        file_path = item.get("content", "")
+                        if not os.path.exists(file_path): 
+                            return False
+                        file_source = open(file_path, 'rb')
+
+                    try:
                         if item["type"] == "video":
-                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup, supports_streaming=True)
+                            send_media_with_caption(bot.send_video, chat_id, file_source, cap, reply_markup=markup, supports_streaming=True)
                         elif item["type"] == "photo":
-                            send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
+                            send_media_with_caption(bot.send_photo, chat_id, file_source, cap, reply_markup=markup)
                         elif item["type"] == "document":
-                            send_media_with_caption(bot.send_document, chat_id, f, cap, reply_markup=markup, visible_file_name=item.get("filename", "file"))
+                            send_media_with_caption(bot.send_document, chat_id, file_source, cap, reply_markup=markup, visible_file_name=item.get("filename", "file"))
                         elif item["type"] == "voice":
-                            send_media_with_caption(bot.send_voice, chat_id, f, cap)
+                            send_media_with_caption(bot.send_voice, chat_id, file_source, cap)
                         elif item["type"] == "audio":
-                            send_media_with_caption(bot.send_audio, chat_id, f, cap)
+                            send_media_with_caption(bot.send_audio, chat_id, file_source, cap)
+                    finally:
+                        if not item.get("is_file_id", False) and hasattr(file_source, 'close'):
+                            file_source.close()
                     return True
             except Exception as e: 
                 logger.error(f"Pin: {e}")
@@ -406,22 +415,31 @@ def send_welcome_contents(chat_id, user_name="User", channel_name="Channel"):
                         send(chat_id, txt, reply_markup=markup)
                     sent = True
                 elif item["type"] in ["video", "photo", "document", "voice", "audio"]:
-                    file_path = item.get("content", "")
-                    if not os.path.exists(file_path): 
-                        continue
                     cap = item.get("caption", "").replace("{name}", safe_name).replace("{channel}", safe_channel)
                     cap = format_quotes(cap)
-                    with open(file_path, 'rb') as f:
+                    
+                    if item.get("is_file_id", False):
+                        file_source = item.get("content")
+                    else:
+                        file_path = item.get("content", "")
+                        if not os.path.exists(file_path): 
+                            continue
+                        file_source = open(file_path, 'rb')
+
+                    try:
                         if item["type"] == "video":
-                            send_media_with_caption(bot.send_video, chat_id, f, cap, reply_markup=markup, supports_streaming=True)
+                            send_media_with_caption(bot.send_video, chat_id, file_source, cap, reply_markup=markup, supports_streaming=True)
                         elif item["type"] == "photo":
-                            send_media_with_caption(bot.send_photo, chat_id, f, cap, reply_markup=markup)
+                            send_media_with_caption(bot.send_photo, chat_id, file_source, cap, reply_markup=markup)
                         elif item["type"] == "document":
-                            send_media_with_caption(bot.send_document, chat_id, f, cap, reply_markup=markup, visible_file_name=item.get("filename", "file"))
+                            send_media_with_caption(bot.send_document, chat_id, file_source, cap, reply_markup=markup, visible_file_name=item.get("filename", "file"))
                         elif item["type"] == "voice":
-                            send_media_with_caption(bot.send_voice, chat_id, f, cap)
+                            send_media_with_caption(bot.send_voice, chat_id, file_source, cap)
                         elif item["type"] == "audio":
-                            send_media_with_caption(bot.send_audio, chat_id, f, cap)
+                            send_media_with_caption(bot.send_audio, chat_id, file_source, cap)
+                    finally:
+                        if not item.get("is_file_id", False) and hasattr(file_source, 'close'):
+                            file_source.close()
                     sent = True
             except Exception as e: 
                 logger.error(f"Welcome: {e}")
@@ -441,7 +459,6 @@ def handle_join(update: types.ChatJoinRequest):
         data["stats"]["channels"][ckey] = {"name": channel, "approved": 0}
     
     try:
-        # Agar join_enabled True hai tabhi auto-approve karega, warna auto-approve skip ho jayega lekin welcome message fir bhi bhej sakte hain agar user manually kare.
         if data.get("join_enabled", True):
             bot.approve_chat_join_request(chat_id, uid)
             data["stats"]["approved"] += 1
@@ -493,7 +510,7 @@ def pin_cmd(message: types.Message):
         return
     contents = data.get("welcome_contents", [])
     if not contents: 
-        send(message.chat.id, "⚠️ Pehle /welcome se content add karo!")
+        send(message.chat.id, "⚠️ Pehle /welcome से content add karo!")
         return
     t = "📌 <b>PIN CONTENT</b>\n\n"
     for i, item in enumerate(contents, 1):
@@ -639,76 +656,39 @@ def handle_callbacks(call: types.CallbackQuery):
         save_data(data)
         send(call.message.chat.id, "✅ Cleared!")
 
-# 📥 FILE UPLOAD (STREAMING OPTIMIZED)
+# 📥 FILE UPLOAD (BYPASSING 20MB LIMIT USING FILE_ID)
 @bot.message_handler(content_types=['video', 'photo', 'document', 'voice', 'audio'], func=lambda m: is_admin(m.from_user.id) and user_states.get(m.from_user.id) == "adding_file")
 def handle_file_upload(message: types.Message):
     uid = message.from_user.id
-    fname = f"w_{datetime.now():%H%M%S}"
     saved = False
     new_item = {"type": "", "content": "", "buttons": []}
     admin_caption = message.caption
     
     try:
         if message.video:
-            fi = bot.get_file(message.video.file_id)
-            d = bot.download_file(fi.file_path)
-            fp = os.path.join(WELCOME_DIR, f"{fname}.mp4")
-            with open(fp, 'wb') as f: 
-                f.write(d)
-            
-            opt_fp = os.path.join(WELCOME_DIR, f"{fname}_opt.mp4")
-            try:
-                subprocess.run(["ffmpeg", "-i", fp, "-movflags", "+faststart", "-acodec", "copy", "-vcodec", "copy", opt_fp], check=True)
-                os.replace(opt_fp, fp)
-            except Exception as ffmpeg_err:
-                logger.error(f"FFmpeg optimize skipped: {ffmpeg_err}")
-                if os.path.exists(opt_fp): 
-                    os.remove(opt_fp)
-
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["video"]
             clean_cap, cap_entities = convert_premium_emojis(cap)
-            new_item = {"type": "video", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
+            new_item = {"type": "video", "content": message.video.file_id, "is_file_id": True, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
             saved = True
         elif message.photo:
-            fi = bot.get_file(message.photo[-1].file_id)
-            d = bot.download_file(fi.file_path)
-            fp = os.path.join(WELCOME_DIR, f"{fname}.jpg")
-            with open(fp, 'wb') as f: 
-                f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["photo"]
             clean_cap, cap_entities = convert_premium_emojis(cap)
-            new_item = {"type": "photo", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
+            new_item = {"type": "photo", "content": message.photo[-1].file_id, "is_file_id": True, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
             saved = True
         elif message.document:
-            fi = bot.get_file(message.document.file_id)
-            d = bot.download_file(fi.file_path)
-            ext = os.path.splitext(message.document.file_name or ".file")[1]
-            fp = os.path.join(WELCOME_DIR, f"{fname}{ext}")
-            with open(fp, 'wb') as f: 
-                f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["document"]
             clean_cap, cap_entities = convert_premium_emojis(cap)
-            new_item = {"type": "document", "content": fp, "filename": message.document.file_name or "file", "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
+            new_item = {"type": "document", "content": message.document.file_id, "is_file_id": True, "filename": message.document.file_name or "file", "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
             saved = True
         elif message.voice:
-            fi = bot.get_file(message.voice.file_id)
-            d = bot.download_file(fi.file_path)
-            fp = os.path.join(WELCOME_DIR, f"{fname}.ogg")
-            with open(fp, 'wb') as f: 
-                f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["voice"]
             clean_cap, cap_entities = convert_premium_emojis(cap)
-            new_item = {"type": "voice", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
+            new_item = {"type": "voice", "content": message.voice.file_id, "is_file_id": True, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
             saved = True
         elif message.audio:
-            fi = bot.get_file(message.audio.file_id)
-            d = bot.download_file(fi.file_path)
-            fp = os.path.join(WELCOME_DIR, f"{fname}.mp3")
-            with open(fp, 'wb') as f: 
-                f.write(d)
             cap = admin_caption if admin_caption else DEFAULT_CAPTIONS["audio"]
             clean_cap, cap_entities = convert_premium_emojis(cap)
-            new_item = {"type": "audio", "content": fp, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
+            new_item = {"type": "audio", "content": message.audio.file_id, "is_file_id": True, "caption": clean_cap, "caption_entities": cap_entities, "buttons": []}
             saved = True
     except Exception as e: 
         logger.error(f"File: {e}")
@@ -717,7 +697,7 @@ def handle_file_upload(message: types.Message):
         data["welcome_contents"].append(new_item)
         save_data(data)
         user_states.pop(uid, None)
-        send(message.chat.id, "✅ File added & optimized! /welcome")
+        send(message.chat.id, "✅ File saved instantly via file_id (No size limit)! /welcome")
     else: 
         user_states.pop(uid, None)
         send(message.chat.id, "❌ Failed!")
@@ -822,8 +802,11 @@ def handle_states(message: types.Message):
         contents = data.get("welcome_contents", [])
         if 0 <= idx < len(contents) and message.text:
             old = contents[idx]
-            if old["type"] != "text" and os.path.exists(old.get("content", "")): 
-                os.remove(old["content"])
+            if not old.get("is_file_id", False) and old["type"] != "text" and os.path.exists(old.get("content", "")): 
+                try:
+                    os.remove(old["content"])
+                except:
+                    pass
             contents[idx] = {"type": "text", "content": message.text, "buttons": old.get("buttons", [])}
             save_data(data)
         user_states.pop(uid, None)
@@ -840,8 +823,11 @@ def handle_states(message: types.Message):
                 elif data.get("pinned_content") is not None and data["pinned_content"] > idx: 
                     data["pinned_content"] -= 1
                 deleted = contents.pop(idx)
-                if deleted["type"] != "text" and os.path.exists(deleted.get("content", "")): 
-                    os.remove(deleted["content"])
+                if not deleted.get("is_file_id", False) and deleted["type"] != "text" and os.path.exists(deleted.get("content", "")): 
+                    try:
+                        os.remove(deleted["content"])
+                    except:
+                        pass
                 save_data(data)
                 send(message.chat.id, "✅ Deleted! /welcome")
         except: 
@@ -935,7 +921,7 @@ def home():
 
 def run_web():
     port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port)
+    app.run('0.0.0.0', port=port)
 
 # 🚀 MAIN ENTRYPOINT
 def main():
